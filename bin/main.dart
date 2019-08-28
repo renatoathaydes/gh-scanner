@@ -1,9 +1,14 @@
 import 'dart:async';
 import 'dart:io' show Platform;
-import 'dart:io';
 
 import 'package:cli_repl/cli_repl.dart';
 import 'package:github_scanner/github_scanner.dart';
+
+typedef MenuItem = FutureOr Function(String answer);
+
+const banner = '''
+##### gh-scanner ######
+''';
 
 const iDontKnow = [
   "Sorry, I don't understand your answer, please enter a valid option.",
@@ -12,57 +17,91 @@ const iDontKnow = [
   "Sorry, I still don't understand. Please select a valid option.",
 ];
 
-main(List<String> arguments) async {
-  info("Hello ${Platform.environment["USER"] ?? 'dear user'}!\n"
-      "What would you like to find on GitHub?\n\n"
-      "Enter the number for the option you want to use:\n\n"
-      "  1 - find user information\n"
-      "  2 - find repositories for a certain topic\n\n");
+const topMenuQuestion = "Enter the number for the option you want to use:\n\n"
+    "  1 - find user information\n"
+    "  2 - find repositories for a certain topic\n";
 
-  print("Type 'exit' or 'q' to exit.\n");
+final topMenuMap = <String, MenuItem>{
+  '1': showUserInfo,
+  '2': showRepoByTopic,
+};
+
+MenuItem topMenu(String answer) {
+  switch (answer) {
+    case '1':
+      print("What 'username' do you want to look up?");
+      return showUserInfo;
+    case '2':
+      print("What topic would you like to search?");
+      return showRepoByTopic;
+    default:
+      return null;
+  }
+}
+
+void main(List<String> arguments) async {
+  warn(banner);
+  info("\nHello ${Platform.environment["USER"] ?? 'dear user'}!\n"
+      "$topMenuQuestion");
+
+  print("Type '\\exit' or '\\q' to exit, or "
+      "'\\top' to get back to the top menu\n");
 
   final repl = Repl(prompt: '>> ', maxHistory: 120);
   var errorIndex = 0;
+  MenuItem menu = topMenu;
 
   try {
-    await for (var line in repl.runAsync()) {
+    loop:
+    for (var line in repl.run()) {
       line = line.trim();
       switch (line) {
-        case '1':
-          await showUserInfo();
-          break;
-        case '2':
-          await showRepoByTopic();
-          break;
-        case 'exit':
-        case 'q':
-          await repl.exit();
+        case '\\exit':
+        case '\\q':
+          break loop;
+        case '\\top':
+          print(topMenuQuestion);
+          menu = topMenu;
           break;
         default:
-          warn(iDontKnow[errorIndex % iDontKnow.length]);
-          errorIndex++;
+          final answer = await menu(line);
+          if (answer == null) {
+            warn(iDontKnow[errorIndex % iDontKnow.length]);
+            errorIndex++;
+          } else {
+            if (answer is MenuItem) {
+              menu = answer;
+            } else {
+              error("ERROR: unexpected answer: $answer");
+              print(topMenuQuestion);
+              menu = topMenu;
+            }
+          }
       }
     }
   } on StateError {
     // ok, we needed to get out of the REPL loop
   }
 
+  await repl.exit();
   info("Goodbye!");
 }
 
-void showUserInfo() async {
-  stdout.write("What username to search? ");
-  final user = stdin.readLineSync().trim();
-  await handleError(() async => show(await findUser(user)));
+Future<MenuItem> showUserInfo(String answer) async {
+  await handleError(
+      () async => show(await findUser(answer), what: ShowWhat.users));
+  print(topMenuQuestion);
+  return topMenu;
 }
 
-void showRepoByTopic() async {
-  stdout.write("What topic to search? ");
-  final topic = stdin.readLineSync().trim();
-  await handleError(() async => show(await findRepoByTopic(topic)));
+Future<MenuItem> showRepoByTopic(String answer) async {
+  await handleError(
+      () async => show(await findRepoByTopic(answer), what: ShowWhat.repos));
+  print(topMenuQuestion);
+  return topMenu;
 }
 
-void handleError(FutureOr Function() run) async {
+Future<void> handleError(FutureOr Function() run) async {
   try {
     await run();
   } catch (e) {
