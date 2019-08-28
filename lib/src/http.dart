@@ -4,7 +4,7 @@ const githubUrl = 'https://api.github.com';
 const githubJsonV3 = 'application/vnd.github.v3+json';
 const githubJsonMercyPreview = 'application/vnd.github.mercy-preview+json';
 
-Future<http.Response> get(String url,
+Future<http.Response> get(dynamic url,
         {Map<String, String> headers = const {'Accept': githubJsonV3}}) =>
     http.get(url, headers: headers);
 

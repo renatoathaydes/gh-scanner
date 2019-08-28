@@ -4,18 +4,9 @@ import 'dart:io' show Platform;
 import 'package:cli_repl/cli_repl.dart';
 import 'package:github_scanner/github_scanner.dart';
 
-typedef MenuItem = FutureOr Function(String answer);
-
 const banner = '''
 ##### gh-scanner ######
 ''';
-
-const iDontKnow = [
-  "Sorry, I don't understand your answer, please enter a valid option.",
-  "You entered an invalid option, please try again.",
-  "Hm... I don't get it. Can you enter a valid option, please?",
-  "Sorry, I still don't understand. Please select a valid option.",
-];
 
 const topMenuQuestion = "Enter the number for the option you want to use:\n\n"
     "  1 - find user information\n"
@@ -88,23 +79,31 @@ void main(List<String> arguments) async {
 }
 
 Future<MenuItem> showUserInfo(String answer) async {
-  await handleError(
+  final menu = await handleError(
       () async => show(await findUser(answer), what: ShowWhat.users));
-  print(topMenuQuestion);
-  return topMenu;
+  return menuOrTopMenu(menu);
 }
 
 Future<MenuItem> showRepoByTopic(String answer) async {
-  await handleError(
+  final menu = await handleError(
       () async => show(await findRepoByTopic(answer), what: ShowWhat.repos));
-  print(topMenuQuestion);
-  return topMenu;
+  return menuOrTopMenu(menu);
 }
 
-Future<void> handleError(FutureOr Function() run) async {
+Future<MenuItem> menuOrTopMenu(MenuItem menu) async {
+  if (menu == null) {
+    print(topMenuQuestion);
+    return topMenu;
+  } else {
+    return menu;
+  }
+}
+
+FutureOr<T> handleError<T>(FutureOr<T> Function() run) async {
   try {
-    await run();
+    return await run();
   } catch (e) {
     error("ERROR: $e");
+    return null;
   }
 }
