@@ -2,11 +2,11 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show stderr;
 
-import 'package:ansicolor/ansicolor.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 
 import 'http.dart';
+import 'log.dart';
 
 typedef MenuItem = FutureOr Function(String answer);
 
@@ -18,27 +18,6 @@ const iDontKnow = [
   "Hm... I don't get it. Can you enter a valid option, please?",
   "Sorry, I still don't understand. Please select a valid option.",
 ];
-
-final _pen = AnsiPen();
-
-enum _Level { fine, info, warn, error }
-
-String asFine(String text) => _usePen(_Level.fine, () => _pen(text).toString());
-
-void fine(String text) => print(asFine(text));
-
-String asInfo(String text) => _usePen(_Level.info, () => _pen(text).toString());
-
-void info(String text) => print(asInfo(text));
-
-String asWarn(String text) => _usePen(_Level.warn, () => _pen(text).toString());
-
-void warn(String text) => print(asWarn(text));
-
-String asError(String text) =>
-    _usePen(_Level.error, () => _pen(text).toString());
-
-void error(String text) => print(asError(text));
 
 Future<MenuItem> show(http.Response resp,
     {bool verbose = false, @required ShowWhat what}) async {
@@ -135,26 +114,4 @@ void _summary(json, Map<String, String> fieldByName,
   fieldByName.forEach((name, field) {
     print("  $name - ${json[field] ?? missingValue}");
   });
-}
-
-T _usePen<T>(_Level _level, T Function() run) {
-  switch (_level) {
-    case _Level.info:
-      _pen.green();
-      break;
-    case _Level.warn:
-      _pen.yellow();
-      break;
-    case _Level.error:
-      _pen.red();
-      break;
-    case _Level.fine:
-      _pen.blue();
-      break;
-  }
-  try {
-    return run();
-  } finally {
-    _pen.reset();
-  }
 }
