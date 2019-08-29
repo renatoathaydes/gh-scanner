@@ -4,18 +4,19 @@ import 'dart:io' show Platform;
 import 'package:cli_repl/cli_repl.dart';
 import 'package:github_scanner/github_scanner.dart';
 
-const banner = '''
-##### gh-scanner ######
+const banner = r'''
+        __                                     
+  ___ _/ /  _______ _______ ____  ___  ___ ____
+ / _ `/ _ \/___(_-</ __/ _ `/ _ \/ _ \/ -_) __/
+ \_, /_//_/   /___/\__/\_,_/_//_/_//_/\__/_/   
+/___/                                          
+
+:: https://github.com/renatoathaydes/gh-scanner ::
 ''';
 
 const topMenuQuestion = "Enter the number for the option you want to use:\n\n"
     "  1 - find user information\n"
     "  2 - find repositories for a certain topic\n";
-
-final topMenuMap = <String, MenuItem>{
-  '1': showUserInfo,
-  '2': showRepoByTopic,
-};
 
 MenuItem topMenu(String answer) {
   switch (answer) {
@@ -32,13 +33,13 @@ MenuItem topMenu(String answer) {
 
 void main(List<String> arguments) async {
   warn(banner);
-  info("\nHello ${Platform.environment["USER"] ?? 'dear user'}!\n"
+  info("Hello ${Platform.environment["USER"] ?? 'dear user'}!\n"
       "$topMenuQuestion");
 
   print("Type '\\exit' or '\\q' to exit, or "
       "'\\top' to get back to the top menu\n");
 
-  final repl = Repl(prompt: '>> ', maxHistory: 120);
+  final repl = Repl(prompt: asFine('>> '), maxHistory: 120);
   var errorIndex = 0;
   MenuItem menu = topMenu;
 
