@@ -21,13 +21,24 @@ const iDontKnow = [
 
 final _pen = AnsiPen();
 
-enum _Level { info, warn, error }
+enum _Level { fine, info, warn, error }
 
-void info(String text) => _usePen(_Level.info, () => print(_pen(text)));
+String asFine(String text) => _usePen(_Level.fine, () => _pen(text).toString());
 
-void warn(String text) => _usePen(_Level.warn, () => print(_pen(text)));
+void fine(String text) => print(asFine(text));
 
-void error(String text) => _usePen(_Level.error, () => print(_pen(text)));
+String asInfo(String text) => _usePen(_Level.info, () => _pen(text).toString());
+
+void info(String text) => print(asInfo(text));
+
+String asWarn(String text) => _usePen(_Level.warn, () => _pen(text).toString());
+
+void warn(String text) => print(asWarn(text));
+
+String asError(String text) =>
+    _usePen(_Level.error, () => _pen(text).toString());
+
+void error(String text) => print(asError(text));
 
 Future<MenuItem> show(http.Response resp,
     {bool verbose = false, @required ShowWhat what}) async {
@@ -126,7 +137,7 @@ void _summary(json, Map<String, String> fieldByName,
   });
 }
 
-void _usePen(_Level _level, Function() run) {
+T _usePen<T>(_Level _level, T Function() run) {
   switch (_level) {
     case _Level.info:
       _pen.green();
@@ -137,10 +148,13 @@ void _usePen(_Level _level, Function() run) {
     case _Level.error:
       _pen.red();
       break;
+    case _Level.fine:
+      _pen.blue();
+      break;
   }
   try {
-    run();
-  } catch (e) {
+    return run();
+  } finally {
     _pen.reset();
   }
 }
