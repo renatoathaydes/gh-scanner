@@ -176,6 +176,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "1.4.6"
+  open_url:
+    dependency: "direct main"
+    description:
+      name: open_url
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "1.0.1"
   package_config:
     dependency: transitive
     description:

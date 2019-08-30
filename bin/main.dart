@@ -3,6 +3,7 @@ import 'dart:io' show Platform;
 
 import 'package:cli_repl/cli_repl.dart';
 import 'package:github_scanner/github_scanner.dart';
+import 'package:github_scanner/src/oauth.dart';
 
 const banner = r'''
         __                                     
@@ -12,6 +13,24 @@ const banner = r'''
 /___/                                          
 
 :: https://github.com/renatoathaydes/gh-scanner ::
+''';
+
+const help = '''
+This is a simple command-line app that helps find information about users and
+repositories on GitHub.
+
+The basic commands are:
+
+  \\q, \\exit  - quit gh-scanner.
+  \\top       - go to the top menu.
+  \\help, \\?  - show this help message.
+  \\login     - login to GitHub.
+  \\logout    - logout from GitHub.
+
+If you start seeing errors regarding rate-limit, you may want to login 
+to GitHub as that will allow you to make more enquiries.
+
+Follow the prompts in each menu for further information.
 ''';
 
 const topMenuQuestion = "Enter the number for the option you want to use:\n\n"
@@ -43,8 +62,8 @@ void main(List<String> args) async {
   info("Hello ${Platform.environment["USER"] ?? 'dear user'}!\n"
       "$topMenuQuestion");
 
-  print("Type '\\exit' or '\\q' to exit, or "
-      "'\\top' to get back to the top menu\n");
+  print("Type '\\exit' or '\\q' to exit, "
+      "'\\help' or '\\?' to see usage help.\n");
 
   final repl = Repl(prompt: asFine('>> '), maxHistory: 120);
   var errorIndex = 0;
@@ -58,6 +77,17 @@ void main(List<String> args) async {
         case '\\exit':
         case '\\q':
           break loop;
+        case '\\help':
+        case '\\?':
+          print(help);
+          break;
+        case '\\login':
+          final token = await authorize(verbose: verbose);
+          if (token != null) useAccessToken(token);
+          break;
+        case '\\logout':
+          useAccessToken(null);
+          break;
         case '\\top':
           print(topMenuQuestion);
           menu = topMenu;
