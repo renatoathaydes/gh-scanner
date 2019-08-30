@@ -10,7 +10,7 @@ import 'log.dart';
 
 typedef MenuItem = FutureOr Function(String answer);
 
-enum ShowWhat { repos, users }
+enum ShowWhat { repos, user, users_by_location }
 
 const iDontKnow = [
   "Sorry, I don't understand your answer, please enter a valid option.",
@@ -42,7 +42,9 @@ Future<http.Response> _get(String answer, ShowWhat what) {
   switch (what) {
     case ShowWhat.repos:
       return findRepoByTopic(answer);
-    case ShowWhat.users:
+    case ShowWhat.users_by_location:
+      return findUsersInLocation(answer);
+    case ShowWhat.user:
     default:
       return findUser(answer);
   }
@@ -53,7 +55,9 @@ MenuItem _show(http.Response resp, ShowWhat showWhat, bool verbose) {
   switch (showWhat) {
     case ShowWhat.repos:
       return _showRepos(json, resp.headers, verbose);
-    case ShowWhat.users:
+    case ShowWhat.user:
+      return _showUser(json, resp.headers, verbose);
+    case ShowWhat.users_by_location:
       return _showUsers(json, resp.headers, verbose);
     default:
       throw Exception("Unknown enum: $showWhat");
@@ -87,7 +91,7 @@ MenuItem _showRepos(json, Map<String, String> headers, bool verbose) {
       warn("Cannot find this repository, please try again.");
       return menu;
     } else {
-      _summary(re, {
+      _summary(re, const {
         'Name': 'full_name',
         'Description:': 'description',
         'Score': 'score',
@@ -103,8 +107,8 @@ MenuItem _showRepos(json, Map<String, String> headers, bool verbose) {
   return menu;
 }
 
-MenuItem _showUsers(json, Map<String, String> headers, bool verbose) {
-  _summary(json, {
+MenuItem _showUser(json, Map<String, String> headers, bool verbose) {
+  _summary(json, const {
     'User': 'login',
     'Name': 'name',
     'Email': 'email',
@@ -130,6 +134,14 @@ MenuItem _showUsers(json, Map<String, String> headers, bool verbose) {
     }
     return null;
   };
+}
+
+MenuItem _showUsers(json, Map<String, String> headers, bool verbose) {
+  print("Found ${json['total_count'] ?? '?'} users:");
+  final users = json['items'] as List;
+  final names = users.map((u) => u['login'] ?? '?').join(', ');
+  print(names);
+  return null;
 }
 
 void _summary(json, Map<String, String> fieldByName,

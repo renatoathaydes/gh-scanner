@@ -13,3 +13,6 @@ Future<http.Response> findRepoByTopic(String topic) =>
         headers: const {'Accept': githubJsonMercyPreview});
 
 Future<http.Response> findUser(String user) => get('${githubUrl}/users/$user');
+
+Future<http.Response> findUsersInLocation(String location) =>
+    get('${githubUrl}/search/users?q=location:$location');
