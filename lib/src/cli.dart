@@ -19,31 +19,48 @@ const iDontKnow = [
   "Sorry, I still don't understand. Please select a valid option.",
 ];
 
-Future<MenuItem> show(http.Response resp,
+Future<MenuItem> show(String answer,
     {bool verbose = false, @required ShowWhat what}) async {
+  final resp = await _get(answer, what);
   if (verbose) {
     stderr
       ..writeln("Status: ${resp.statusCode}")
-      ..writeln("Headers: ${resp.headers}");
+      ..writeln("Headers: ${resp.headers}")
+      ..writeln(resp.body)
+      ..writeln("---------");
+  }
+  if (resp.statusCode != 200) {
+    error(resp.body);
+    return null;
   }
 
   // let stderr go out first
-  return await Future(() => _show(resp.body, what, verbose));
+  return await Future(() => _show(resp, what, verbose));
 }
 
-MenuItem _show(String body, ShowWhat showWhat, bool verbose) {
-  final json = jsonDecode(body);
+Future<http.Response> _get(String answer, ShowWhat what) {
+  switch (what) {
+    case ShowWhat.repos:
+      return findRepoByTopic(answer);
+    case ShowWhat.users:
+    default:
+      return findUser(answer);
+  }
+}
+
+MenuItem _show(http.Response resp, ShowWhat showWhat, bool verbose) {
+  final json = jsonDecode(resp.body);
   switch (showWhat) {
     case ShowWhat.repos:
-      return _showRepos(json, verbose);
+      return _showRepos(json, resp.headers, verbose);
     case ShowWhat.users:
-      return _showUsers(json, verbose);
+      return _showUsers(json, resp.headers, verbose);
     default:
       throw Exception("Unknown enum: $showWhat");
   }
 }
 
-MenuItem _showRepos(json, bool verbose) {
+MenuItem _showRepos(json, Map<String, String> headers, bool verbose) {
   List items;
   if (json is List) {
     items = json;
@@ -53,7 +70,9 @@ MenuItem _showRepos(json, bool verbose) {
   }
 
   for (final repo in items) {
-    print("  * ${repo['name']} (by ${repo['created_by'] ?? 'unknown'}) - "
+    print("  * ${repo['name']} "
+        "(by ${repo['owner']['type'] ?? 'User'} "
+        "${repo['owner']['login'] ?? 'unknown'}) - "
         "score: ${repo['score']}");
   }
 
@@ -69,9 +88,12 @@ MenuItem _showRepos(json, bool verbose) {
       return menu;
     } else {
       _summary(re, {
-        'Name': 'display_name',
-        'Description:': 'short_description',
-        'Score': 'score'
+        'Name': 'full_name',
+        'Description:': 'description',
+        'Score': 'score',
+        'Watchers': 'watchers_count',
+        'Language': 'language',
+        'URL': 'html_url',
       });
       print("Enter another repository name or \\top to go to the main menu.");
       return menu;
@@ -81,7 +103,7 @@ MenuItem _showRepos(json, bool verbose) {
   return menu;
 }
 
-MenuItem _showUsers(json, bool verbose) {
+MenuItem _showUsers(json, Map<String, String> headers, bool verbose) {
   _summary(json, {
     'User': 'login',
     'Name': 'name',
@@ -90,6 +112,7 @@ MenuItem _showUsers(json, bool verbose) {
     'Biography': 'bio',
     'Repositories': 'public_repos',
     'Followers': 'followers',
+    'Location': 'location',
     'Hireable': 'hireable'
   });
 
@@ -99,7 +122,7 @@ MenuItem _showUsers(json, bool verbose) {
     switch (answer) {
       case '1':
         final resp = await get(json['repos_url']);
-        return _show(resp.body, ShowWhat.repos, verbose);
+        return _show(resp, ShowWhat.repos, verbose);
       case '2':
         warn("TODO");
         final resp = await get(json['subscriptions_url']);

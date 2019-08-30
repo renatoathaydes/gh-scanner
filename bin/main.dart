@@ -31,7 +31,10 @@ MenuItem topMenu(String answer) {
   }
 }
 
-void main(List<String> arguments) async {
+bool verbose = false;
+
+void main(List<String> args) async {
+  verbose = args.contains('-v');
   warn(banner);
   info("Hello ${Platform.environment["USER"] ?? 'dear user'}!\n"
       "$topMenuQuestion");
@@ -56,7 +59,7 @@ void main(List<String> arguments) async {
           menu = topMenu;
           break;
         default:
-          final answer = await menu(line);
+          final answer = await handleError(() => menu(line));
           if (answer == null) {
             warn(iDontKnow[errorIndex % iDontKnow.length]);
             errorIndex++;
@@ -81,13 +84,13 @@ void main(List<String> arguments) async {
 
 Future<MenuItem> showUserInfo(String answer) async {
   final menu = await handleError(
-      () async => show(await findUser(answer), what: ShowWhat.users));
+      () async => await show(answer, verbose: verbose, what: ShowWhat.users));
   return menuOrTopMenu(menu);
 }
 
 Future<MenuItem> showRepoByTopic(String answer) async {
   final menu = await handleError(
-      () async => show(await findRepoByTopic(answer), what: ShowWhat.repos));
+      () async => await show(answer, verbose: verbose, what: ShowWhat.repos));
   return menuOrTopMenu(menu);
 }
 
