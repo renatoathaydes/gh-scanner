@@ -19,6 +19,27 @@ const iDontKnow = [
   "Sorry, I still don't understand. Please select a valid option.",
 ];
 
+const _repositorySummary = {
+  'User': 'login',
+  'Name': 'name',
+  'Email': 'email',
+  'URL': 'html_url',
+  'Biography': 'bio',
+  'Repositories': 'public_repos',
+  'Followers': 'followers',
+  'Location': 'location',
+  'Hireable': 'hireable'
+};
+
+const _userSummary = {
+  'Name': 'full_name',
+  'Description:': 'description',
+  'Score': 'score',
+  'Watchers': 'watchers_count',
+  'Language': 'language',
+  'URL': 'html_url',
+};
+
 Future<MenuItem> show(String answer,
     {bool verbose = false, @required ShowWhat what}) async {
   final resp = await _get(answer, what);
@@ -100,14 +121,7 @@ MenuItem _showRepos(json, Map<String, String> headers, bool verbose) {
       warn("Cannot find this repository, please try again.");
       return menu;
     } else {
-      _summary(re, const {
-        'Name': 'full_name',
-        'Description:': 'description',
-        'Score': 'score',
-        'Watchers': 'watchers_count',
-        'Language': 'language',
-        'URL': 'html_url',
-      });
+      _summary(re, _userSummary);
       print("Enter another repository name or \\top to go to the main menu.");
       return menu;
     }
@@ -117,17 +131,7 @@ MenuItem _showRepos(json, Map<String, String> headers, bool verbose) {
 }
 
 MenuItem _showUser(json, Map<String, String> headers, bool verbose) {
-  _summary(json, const {
-    'User': 'login',
-    'Name': 'name',
-    'Email': 'email',
-    'URL': 'html_url',
-    'Biography': 'bio',
-    'Repositories': 'public_repos',
-    'Followers': 'followers',
-    'Location': 'location',
-    'Hireable': 'hireable'
-  });
+  _summary(json, _repositorySummary);
 
   print("\nShow user's:\n  1 - repositories\n  2 - subscriptions");
 
