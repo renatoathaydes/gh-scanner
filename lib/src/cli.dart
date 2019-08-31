@@ -136,16 +136,18 @@ MenuItem _showUser(json, Map<String, String> headers, bool verbose) {
   print("\nShow user's:\n  1 - repositories\n  2 - subscriptions");
 
   return (answer) async {
+    http.Response resp;
     switch (answer) {
       case '1':
-        final resp = await get(json['repos_url']);
-        return _show(resp, ShowWhat.repos, verbose);
+        resp = await get(json['repos_url']);
+        break;
       case '2':
-        warn("TODO");
-        final resp = await get(json['subscriptions_url']);
-        print(resp.body);
+        resp = await get(json['subscriptions_url']);
+        break;
+      default:
+        return null;
     }
-    return null;
+    return _show(resp, ShowWhat.repos, verbose);
   };
 }
 
