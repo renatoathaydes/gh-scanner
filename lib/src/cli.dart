@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show stderr;
 
+import 'package:github_scanner/src/headers.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 
@@ -19,7 +20,7 @@ const iDontKnow = [
   "Sorry, I still don't understand. Please select a valid option.",
 ];
 
-const _repositorySummary = {
+const _userSummary = {
   'User': 'login',
   'Name': 'name',
   'Email': 'email',
@@ -31,7 +32,7 @@ const _repositorySummary = {
   'Hireable': 'hireable'
 };
 
-const _userSummary = {
+const _repositorySummary = {
   'Name': 'full_name',
   'Description:': 'description',
   'Score': 'score',
@@ -110,19 +111,34 @@ MenuItem _showRepos(json, Map<String, String> headers, bool verbose) {
         "score: ${repo['score'] ?? '?'}");
   }
 
-  print("Enter the name of a repository to show more information about it.\n"
-      "Enter \\top to go back to the main menu.");
+  final nextPage = _linkToNextPage(headers);
+
+  final askQuestion = () {
+    print("Enter the name of a repository to show more information about it,\n"
+            "\\top to go back to the main menu" +
+        (nextPage == null ? '.' : ",\n\\next to see the next repositories."));
+  };
+
+  askQuestion();
 
   MenuItem menu;
-  menu = (answer) {
+  menu = (answer) async {
+    if (answer == '\\next') {
+      if (nextPage == null) {
+        warn("There is no next page to go to.");
+        return menu;
+      } else {
+        return _show(await get(nextPage), ShowWhat.repos, verbose);
+      }
+    }
     final re =
         items.firstWhere((repo) => repo['name'] == answer, orElse: () => null);
     if (re == null) {
       warn("Cannot find this repository, please try again.");
       return menu;
     } else {
-      _summary(re, _userSummary);
-      print("Enter another repository name or \\top to go to the main menu.");
+      _summary(re, _repositorySummary);
+      askQuestion();
       return menu;
     }
   };
@@ -131,7 +147,7 @@ MenuItem _showRepos(json, Map<String, String> headers, bool verbose) {
 }
 
 MenuItem _showUser(json, Map<String, String> headers, bool verbose) {
-  _summary(json, _repositorySummary);
+  _summary(json, _userSummary);
 
   print("\nShow user's:\n  1 - repositories\n  2 - subscriptions");
 
@@ -156,7 +172,39 @@ MenuItem _showUsers(json, Map<String, String> headers, bool verbose) {
   final users = json['items'] as List;
   final names = users.map((u) => u['login'] ?? '?').join(', ');
   print(names);
-  return null;
+
+  final nextPage = _linkToNextPage(headers);
+
+  final askQuestion = () {
+    print("\nEnter the name of a user to show more information about them,\n"
+            "\\top to go back to the main menu" +
+        (nextPage == null ? '.' : ",\n\\next to see the next users."));
+  };
+
+  askQuestion();
+
+  MenuItem menu;
+  menu = (answer) async {
+    if (answer == '\\next') {
+      if (nextPage == null) {
+        warn("There is no next page to go to.");
+        return menu;
+      } else {
+        return _show(await get(nextPage), ShowWhat.users_by_location, verbose);
+      }
+    }
+    final user =
+        users.firstWhere((u) => u['login'] == answer, orElse: () => null);
+    if (user == null) {
+      warn("Cannot find user, please try again.");
+      return menu;
+    } else {
+      _summary(user, _userSummary);
+      askQuestion();
+      return menu;
+    }
+  };
+  return menu;
 }
 
 void _summary(json, Map<String, String> fieldByName,
@@ -164,4 +212,11 @@ void _summary(json, Map<String, String> fieldByName,
   fieldByName.forEach((name, field) {
     print("  $name - ${json[field] ?? missingValue}");
   });
+}
+
+String _linkToNextPage(Map<String, String> headers) {
+  final link = headers['link'];
+  if (link == null) return null;
+  final linkHeader = parseLinkHeader(link);
+  return linkHeader.next;
 }
