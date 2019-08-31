@@ -21,11 +21,11 @@ repositories on GitHub.
 
 The basic commands are:
 
-  \\q, \\exit  - quit gh-scanner.
-  \\top       - go to the top menu.
-  \\help, \\?  - show this help message.
-  \\login     - login to GitHub.
-  \\logout    - logout from GitHub.
+  \\q, \\quit   - quit gh-scanner.
+  \\t, \\top    - go to the top menu.
+  \\i, \\login  - login to GitHub.
+  \\o, \\logout - logout from GitHub.
+  \\?, \\help   - show this help message.
 
 If you start seeing errors regarding rate-limit, you may want to login 
 to GitHub as that will allow you to make more enquiries.
@@ -59,11 +59,10 @@ bool verbose = false;
 void main(List<String> args) async {
   verbose = args.contains('-v');
   warn(banner);
-  info("Hello ${Platform.environment["USER"] ?? 'dear user'}!\n"
+  info("Hello ${Platform.environment["USER"] ?? ' user'}!\n"
       "$topMenuQuestion");
 
-  print("Type '\\exit' or '\\q' to exit, "
-      "'\\help' or '\\?' to see usage help.\n");
+  print("Type '\\q' to exit, '\\?' to see usage help.\n");
 
   final repl = Repl(prompt: asFine('>> '), maxHistory: 120);
   var errorIndex = 0;
@@ -74,7 +73,7 @@ void main(List<String> args) async {
     for (var line in repl.run()) {
       line = line.trim();
       switch (line) {
-        case '\\exit':
+        case '\\quit':
         case '\\q':
           break loop;
         case '\\help':
@@ -82,12 +81,15 @@ void main(List<String> args) async {
           print(help);
           break;
         case '\\login':
+        case '\\i':
           final token = await authorize(verbose: verbose);
           if (token != null) useAccessToken(token);
           break;
+        case '\\o':
         case '\\logout':
           useAccessToken(null);
           break;
+        case '\\t':
         case '\\top':
           print(topMenuQuestion);
           menu = topMenu;

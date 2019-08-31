@@ -21,7 +21,7 @@ Future<String> authorize({bool verbose = false}) async {
 Future<String> _exchangeForToken(String code, bool verbose) async {
   final resp = await http.post(
     'https://github.com/login/oauth/access_token',
-    headers: {'Accept': 'application/json'},
+    headers: const {'Accept': 'application/json'},
     body: {'client_id': cid, 'client_secret': cscrt, 'code': code},
   );
   if (resp.statusCode == 200) {
