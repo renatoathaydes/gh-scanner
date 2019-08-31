@@ -66,18 +66,27 @@ MenuItem _show(http.Response resp, ShowWhat showWhat, bool verbose) {
 
 MenuItem _showRepos(json, Map<String, String> headers, bool verbose) {
   List items;
+  String reposFound;
   if (json is List) {
     items = json;
+    reposFound = items.length.toString();
   } else {
-    print("Found ${json["total_count"] ?? 'unknown'} repositories.");
     items = json["items"] as List;
+    reposFound = json["total_count"]?.toString() ?? '?';
+  }
+
+  if (items.isEmpty) {
+    print("No repositories were found.");
+    return null;
+  } else {
+    print("Found ${reposFound} repositories.");
   }
 
   for (final repo in items) {
     print("  * ${repo['name']} "
         "(by ${repo['owner']['type'] ?? 'User'} "
         "${repo['owner']['login'] ?? 'unknown'}) - "
-        "score: ${repo['score']}");
+        "score: ${repo['score'] ?? '?'}");
   }
 
   print("Enter the name of a repository to show more information about it.\n"
