@@ -36,8 +36,10 @@ const _repositorySummary = {
   'Name': 'full_name',
   'Description:': 'description',
   'Score': 'score',
-  'Watchers': 'watchers_count',
+  'Stars': 'stargazers_count',
   'Language': 'language',
+  'Fork': 'fork',
+  'Open issues': 'open_issues_count',
   'URL': 'html_url',
 };
 
@@ -105,8 +107,9 @@ MenuItem _showRepos(json, Map<String, String> headers, bool verbose) {
   }
 
   for (final repo in items) {
-    print("  * ${repo['name']} "
-        "(by ${repo['owner']['type'] ?? 'User'} "
+    print("  * ${repo['name']} ("
+        "${repo['fork'] == true ? '<fork> ' : ''}"
+        "by ${repo['owner']['type'] ?? 'User'} "
         "${repo['owner']['login'] ?? 'unknown'}) - "
         "score: ${repo['score'] ?? '?'}");
   }
