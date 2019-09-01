@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io' show stderr;
 
 import 'package:github_scanner/src/headers.dart';
+import 'package:github_scanner/src/search.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 
@@ -171,8 +172,16 @@ MenuItem _showUser(json, Map<String, String> headers, bool verbose) {
 }
 
 MenuItem _showUsers(json, Map<String, String> headers, bool verbose) {
-  print("Found ${json['total_count'] ?? '?'} users:");
   final users = json['items'] as List;
+  if (users.isEmpty) {
+    print("No users have been found.\n"
+        "Try searching again.");
+    final userSearch = UserSearch(verbose);
+    userSearch.ask();
+    return userSearch;
+  }
+
+  print("Found ${json['total_count'] ?? '?'} users:");
   final names = users.map((u) => u['login'] ?? '?').join(', ');
   print(names);
 
