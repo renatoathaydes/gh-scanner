@@ -31,8 +31,14 @@ Future<http.Response> findRepoByTopic(String topic) =>
 
 Future<http.Response> findUser(String user) => get('${githubUrl}/users/$user');
 
-Future<http.Response> findUsersInLocation(String location) =>
-    get('${githubUrl}/search/users?q=location:$location');
+Future<http.Response> findUsers(
+    {String location, String language, int numberOfRepos}) {
+  List<String> queryParts = ['type:user'];
+  if (location != null) queryParts.add("location:$location");
+  if (language != null) queryParts.add("language:$language");
+  if (numberOfRepos != null) queryParts.add("repos:>=$numberOfRepos");
+  return get('${githubUrl}/search/users?q=${queryParts.join(' ')}');
+}
 
 Map<String, String> _withAuth(Map<String, String> headers) {
   if (_accessToken != null) {

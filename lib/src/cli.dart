@@ -11,7 +11,7 @@ import 'log.dart';
 
 typedef MenuItem = FutureOr Function(String answer);
 
-enum ShowWhat { repos, user, users_by_location }
+enum ShowWhat { repos, user, users }
 
 const iDontKnow = [
   "Sorry, I don't understand your answer, please enter a valid option.",
@@ -59,29 +59,29 @@ Future<MenuItem> show(String answer,
   }
 
   // let stderr go out first
-  return await Future(() => _show(resp, what, verbose));
+  return await Future(() => showResponse(resp, what, verbose));
 }
 
 Future<http.Response> _get(String answer, ShowWhat what) {
   switch (what) {
     case ShowWhat.repos:
       return findRepoByTopic(answer);
-    case ShowWhat.users_by_location:
-      return findUsersInLocation(answer);
+    case ShowWhat.users:
+      throw 'error'; // TODO should not be called anymore
     case ShowWhat.user:
     default:
       return findUser(answer);
   }
 }
 
-MenuItem _show(http.Response resp, ShowWhat showWhat, bool verbose) {
+MenuItem showResponse(http.Response resp, ShowWhat showWhat, bool verbose) {
   final json = jsonDecode(resp.body);
   switch (showWhat) {
     case ShowWhat.repos:
       return _showRepos(json, resp.headers, verbose);
     case ShowWhat.user:
       return _showUser(json, resp.headers, verbose);
-    case ShowWhat.users_by_location:
+    case ShowWhat.users:
       return _showUsers(json, resp.headers, verbose);
     default:
       throw Exception("Unknown enum: $showWhat");
@@ -131,7 +131,7 @@ MenuItem _showRepos(json, Map<String, String> headers, bool verbose) {
         warn("There is no next page to go to.");
         return menu;
       } else {
-        return _show(await get(nextPage), ShowWhat.repos, verbose);
+        return showResponse(await get(nextPage), ShowWhat.repos, verbose);
       }
     }
     final re =
@@ -166,7 +166,7 @@ MenuItem _showUser(json, Map<String, String> headers, bool verbose) {
       default:
         return null;
     }
-    return _show(resp, ShowWhat.repos, verbose);
+    return showResponse(resp, ShowWhat.repos, verbose);
   };
 }
 
@@ -193,7 +193,7 @@ MenuItem _showUsers(json, Map<String, String> headers, bool verbose) {
         warn("There is no next page to go to.");
         return menu;
       } else {
-        return _show(await get(nextPage), ShowWhat.users_by_location, verbose);
+        return showResponse(await get(nextPage), ShowWhat.users, verbose);
       }
     }
     final user =

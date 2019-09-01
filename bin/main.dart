@@ -34,8 +34,8 @@ Follow the prompts in each menu for further information.
 ''';
 
 const topMenuQuestion = "Enter the number for the option you want to use:\n\n"
-    "  1 - find user by username\n"
-    "  2 - find users by location\n"
+    "  1 - find a user by username\n"
+    "  2 - find users matching certain parameters\n"
     "  3 - find repositories for a certain topic\n";
 
 MenuItem topMenu(String answer) {
@@ -44,8 +44,9 @@ MenuItem topMenu(String answer) {
       print("What 'username' do you want to look up?");
       return showUserInfo;
     case '2':
-      print("What location would you like to search?");
-      return showUsersInLocation;
+      final userSearch = UserSearch(verbose);
+      userSearch.ask();
+      return userSearch;
     case '3':
       print("What topic would you like to search?");
       return showRepoByTopic;
@@ -121,12 +122,6 @@ void main(List<String> args) async {
 Future<MenuItem> showUserInfo(String answer) async {
   final menu = await handleError(
       () async => await show(answer, verbose: verbose, what: ShowWhat.user));
-  return menuOrTopMenu(menu);
-}
-
-Future<MenuItem> showUsersInLocation(String answer) async {
-  final menu = await handleError(() async =>
-      await show(answer, verbose: verbose, what: ShowWhat.users_by_location));
   return menuOrTopMenu(menu);
 }
 
