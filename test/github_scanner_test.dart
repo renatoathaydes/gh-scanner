@@ -1,4 +1,4 @@
-import 'package:github_scanner/src/headers.dart';
+import 'package:github_scanner/src/_headers.dart';
 import 'package:test/test.dart';
 
 void main() {

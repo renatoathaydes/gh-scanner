@@ -1,17 +1,27 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:github_scanner/github_scanner.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_url/open_url.dart';
+
+import 'log.dart';
+import '_http.dart';
 
 const cid = '0c5f1d25c749c7739dd1';
 const cscrt = '20098ec22b51dcc65e802c17fa555bfdd50b69c3';
 
 /// Authorize GitHub user using the authorization code OAuth flow.
-///
-/// Returns an access token if successful, null otherwise.
-Future<String> authorize({bool verbose = false}) async {
+Future<void> login({bool verbose = false}) async {
+  final token = await _authorize(verbose);
+  if (token != null) useAccessToken(token);
+}
+
+/// Log user out.
+Future<void> logout({bool verbose = false}) async {
+  useAccessToken(null);
+}
+
+Future<String> _authorize(bool verbose) async {
   await openUrl('https://github.com/login/oauth/authorize?client_id=$cid');
   String code = await _waitForCode(verbose);
   if (code == null) return null;

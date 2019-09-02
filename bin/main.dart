@@ -1,9 +1,7 @@
-import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:cli_repl/cli_repl.dart';
 import 'package:github_scanner/github_scanner.dart';
-import 'package:github_scanner/src/oauth.dart';
 
 const banner = r'''
         __                                     
@@ -23,6 +21,7 @@ The basic commands are:
 
   \\q, \\quit   - quit gh-scanner.
   \\t, \\top    - go to the top menu.
+  \\b, \\back   - go back to previous menu.
   \\i, \\login  - login to GitHub.
   \\o, \\logout - logout from GitHub.
   \\?, \\help   - show this help message.
@@ -33,41 +32,17 @@ to GitHub as that will allow you to make more enquiries.
 Follow the prompts in each menu for further information.
 ''';
 
-const topMenuQuestion = "Enter the number for the option you want to use:\n\n"
-    "  1 - find a user by username\n"
-    "  2 - find users matching certain parameters\n"
-    "  3 - find repositories for a certain topic\n";
-
-MenuItem topMenu(String answer) {
-  switch (answer) {
-    case '1':
-      print("What 'username' do you want to look up?");
-      return showUserInfo;
-    case '2':
-      final userSearch = UserSearch(verbose);
-      userSearch.ask();
-      return userSearch;
-    case '3':
-      print("What topic would you like to search?");
-      return showRepoByTopic;
-    default:
-      return null;
-  }
-}
-
-bool verbose = false;
-
 void main(List<String> args) async {
-  verbose = args.contains('-v');
+  final verbose = args.contains('-v');
   warn(banner);
-  info("Hello ${Platform.environment["USER"] ?? ' user'}!\n"
-      "$topMenuQuestion");
+  info("Hello ${Platform.environment["USER"] ?? ' user'}!");
 
   print("Type '\\q' to exit, '\\?' to see usage help.\n");
 
   final repl = Repl(prompt: asFine('>> '), maxHistory: 120);
   var errorIndex = 0;
-  MenuItem menu = topMenu;
+  MenuItem menu = TopMenu.instance..verbose = verbose;
+  menu.ask();
 
   try {
     loop:
@@ -83,33 +58,35 @@ void main(List<String> args) async {
           break;
         case '\\login':
         case '\\i':
-          final token = await authorize(verbose: verbose);
-          if (token != null) useAccessToken(token);
+          await login();
           break;
         case '\\o':
         case '\\logout':
-          useAccessToken(null);
+          await logout();
           break;
         case '\\t':
         case '\\top':
-          print(topMenuQuestion);
-          menu = topMenu;
+          menu = TopMenu.instance;
+          break;
+        case '\\b':
+        case '\\back':
+          final newMenu = menu.prev();
+          if (newMenu == null) {
+            warn("No previous menu to go to.");
+          } else {
+            menu = newMenu;
+          }
           break;
         default:
-          final answer = await handleError(() => menu(line));
-          if (answer == null) {
+          final newMenu = await handleError(() => menu(line));
+          if (newMenu == null) {
             warn(iDontKnow[errorIndex % iDontKnow.length]);
             errorIndex++;
           } else {
-            if (answer is MenuItem) {
-              menu = answer;
-            } else {
-              error("ERROR: unexpected answer: $answer");
-              print(topMenuQuestion);
-              menu = topMenu;
-            }
+            menu = newMenu;
           }
       }
+      menu.ask();
     }
   } on StateError {
     // ok, we needed to get out of the REPL loop
@@ -117,34 +94,4 @@ void main(List<String> args) async {
 
   await repl.exit();
   info("Goodbye!");
-}
-
-Future<MenuItem> showUserInfo(String answer) async {
-  final menu = await handleError(
-      () async => await show(answer, verbose: verbose, what: ShowWhat.user));
-  return menuOrTopMenu(menu);
-}
-
-Future<MenuItem> showRepoByTopic(String answer) async {
-  final menu = await handleError(
-      () async => await show(answer, verbose: verbose, what: ShowWhat.repos));
-  return menuOrTopMenu(menu);
-}
-
-Future<MenuItem> menuOrTopMenu(MenuItem menu) async {
-  if (menu == null) {
-    print(topMenuQuestion);
-    return topMenu;
-  } else {
-    return menu;
-  }
-}
-
-FutureOr<T> handleError<T>(FutureOr<T> Function() run) async {
-  try {
-    return await run();
-  } catch (e) {
-    error("ERROR: $e");
-    return null;
-  }
 }

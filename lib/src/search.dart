@@ -1,17 +1,35 @@
 import 'dart:async';
 
 import 'package:github_scanner/github_scanner.dart';
+import 'package:github_scanner/src/_http.dart';
+import 'package:github_scanner/src/users.dart';
 
-class UserSearch {
+const _accept = true;
+const _reject = false;
+
+class UserSearch with MenuItem {
   String location;
   String language;
   int numberOfRepos;
   final bool verbose;
+  final MenuItem _prev;
 
-  UserSearch(this.verbose);
+  MenuItem _locationSetter;
+  MenuItem _languageSetter;
+  MenuItem _numOfReposSetter;
 
-  MenuItem get self => this;
+  UserSearch(this.verbose, this._prev) {
+    _locationSetter =
+        _SetParameter("Enter a location (e.g. Stockholm).", _setLocation, this);
+    _languageSetter = _SetParameter(
+        "Enter a Programming Language name (e.g. Java).", _setLanguage, this);
+    _numOfReposSetter = _SetParameter(
+        "Enter the minimum number of repositories (e.g. 4).",
+        _setNumRepos,
+        this);
+  }
 
+  @override
   void ask() {
     print("Enter a parameter to include in the search:\n"
         "  1 - Location${location == null ? '' : ' ($location)'}\n"
@@ -22,61 +40,82 @@ class UserSearch {
     }
   }
 
-  FutureOr call(String answer) {
+  @override
+  MenuItem prev() => _prev;
+
+  @override
+  FutureOr<MenuItem> call(String answer) {
     switch (answer) {
+      case '1':
+        return _locationSetter;
+      case '2':
+        return _languageSetter;
+      case '3':
+        return _numOfReposSetter;
       case '\\s':
         return _go();
-      case '1':
-        return _getLocationAnswer();
-      case '2':
-        return _getLanguageAnswer();
-      case '3':
-        return _getNumberOfReposAnswer();
       default:
         return null;
     }
   }
 
-  MenuItem _getLocationAnswer() {
-    print("Enter a location (e.g. Stockholm).");
-    return (answer) {
-      location = answer;
-      ask();
-      return self;
-    };
+  bool _setLocation(String loc) {
+    location = loc;
+    return _accept;
   }
 
-  MenuItem _getLanguageAnswer() {
-    print("Enter a Programming Language name (e.g. Java).");
-    return (answer) {
-      language = answer;
-      ask();
-      return self;
-    };
+  bool _setLanguage(String lang) {
+    language = lang;
+    return _accept;
   }
 
-  MenuItem _getNumberOfReposAnswer() {
-    print("Enter the minimum number of repositories (e.g. 4).");
-    return (answer) {
-      numberOfRepos = int.tryParse(answer);
-      if (numberOfRepos == null || numberOfRepos < 0) {
-        warn("You must enter a positive number, please try again");
-        return _getNumberOfReposAnswer();
-      }
-      ask();
-      return self;
-    };
+  bool _setNumRepos(String answer) {
+    numberOfRepos = int.tryParse(answer);
+    if (numberOfRepos == null || numberOfRepos < 0) {
+      warn("You must enter a positive number, please try again.");
+      return _reject;
+    }
+    return _accept;
   }
 
   Future<MenuItem> _go() async {
     if (location != null || language != null || numberOfRepos != null) {
       final resp = await findUsers(
-          location: location, language: language, numberOfRepos: numberOfRepos);
-      return showResponse(resp, ShowWhat.users, verbose);
+          location: location,
+          language: language,
+          numberOfRepos: numberOfRepos,
+          verbose: verbose);
+      if (resp.statusCode == 200) {
+        return ShowUsers(verbose, this, resp);
+      } else {
+        warn("Unexpected response: statusCode=${resp.statusCode}, "
+            "error=${resp.body}");
+        return _prev;
+      }
     } else {
       warn("No query parameters have been entered. Please try again.");
-      ask();
-      return self;
+      return this;
     }
   }
+}
+
+class _SetParameter with MenuItem {
+  final String question;
+  final bool Function(String) setter;
+  final MenuItem _prev;
+
+  _SetParameter(this.question, this.setter, this._prev);
+
+  @override
+  void ask() => print(question);
+
+  @override
+  FutureOr<MenuItem> call(String answer) {
+    final accepted = setter(answer);
+    if (accepted) return _prev;
+    return this;
+  }
+
+  @override
+  MenuItem prev() => _prev;
 }
