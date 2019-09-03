@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:http/http.dart' as http;
+
 import '_headers.dart';
 import 'log.dart';
 
@@ -39,4 +41,9 @@ FutureOr<T> handleError<T>(FutureOr<T> Function() run) async {
     error("ERROR: $e");
     return null;
   }
+}
+
+void errorResponse(http.Response resp) {
+  error("Unexpected response: statusCode=${resp.statusCode}, "
+      "error=${resp.body}");
 }

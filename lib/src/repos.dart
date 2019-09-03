@@ -37,18 +37,13 @@ class RepoSearch with MenuItem {
     final resp = await findRepoByTopic(answer, verbose: verbose);
     if (resp.statusCode == 200) {
       final showRepos = ShowRepos(verbose, this, resp);
-      if (showRepos.isEmptyResponse) {
-        warn("No repositories found.");
-      } else {
-        showRepos.reportRepositoriesCount();
+      showRepos.reportRepositoriesCount();
+      if (!showRepos.isEmptyResponse) {
         showRepos.showRepositories();
         return showRepos;
       }
-    } else if (resp.statusCode == 404) {
-      warn("No repositories found.");
     } else {
-      error("Unable to find repository due to an error: "
-          "status=${resp.statusCode}, error: ${resp.body}");
+      errorResponse(resp);
     }
     return this;
   }

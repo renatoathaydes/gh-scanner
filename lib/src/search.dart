@@ -86,10 +86,15 @@ class UserSearch with MenuItem {
           numberOfRepos: numberOfRepos,
           verbose: verbose);
       if (resp.statusCode == 200) {
-        return ShowUsers(verbose, this, resp);
+        final showUsers = ShowUsers(verbose, this, resp);
+        showUsers.reportUserCount();
+        if (showUsers.foundUsers) {
+          showUsers.showUsers();
+          return showUsers;
+        }
+        return this;
       } else {
-        warn("Unexpected response: statusCode=${resp.statusCode}, "
-            "error=${resp.body}");
+        errorResponse(resp);
         return _prev;
       }
     } else {

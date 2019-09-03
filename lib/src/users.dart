@@ -41,11 +41,8 @@ class LookupUsername with MenuItem {
       final json = jsonDecode(resp.body);
       summary(json, _userSummary);
       return UserSubMenu(verbose, this, answer, json);
-    } else if (resp.statusCode == 404) {
-      warn("User not found.");
     } else {
-      error("Unable to find user due to an error: "
-          "status=${resp.statusCode}, error: ${resp.body}");
+      errorResponse(resp);
     }
     return this;
   }
@@ -80,37 +77,46 @@ class UserSubMenu with MenuItem {
       default:
         return null;
     }
-    final repos= ShowRepos(verbose, this, resp);
-    repos.reportRepositoriesCount();
-    repos.showRepositories();
-    return repos;
+    if (resp.statusCode == 200) {
+      final repos = ShowRepos(verbose, this, resp);
+      repos.reportRepositoriesCount();
+      if (repos.isEmptyResponse) {
+        return this;
+      } else {
+        repos.showRepositories();
+        return repos;
+      }
+    } else {
+      errorResponse(resp);
+      return this;
+    }
   }
 }
 
 class ShowUsers with MenuItem {
   final bool verbose;
   final MenuItem _prev;
-  http.Response _response;
   String _nextPage;
+  dynamic _json;
 
-  // if no users are found, this menu should delegate to the previous menu.
-  bool _callPrev = false;
+  ShowUsers(this.verbose, this._prev, http.Response response) {
+    _updateResponse(response);
+  }
 
-  ShowUsers(this.verbose, this._prev, this._response) {
-    _nextPage = linkToNextPage(_response.headers);
-    final foundUsers = _show();
-    if (!foundUsers) _callPrev = true;
+  static List _usersFrom(json) => json['items'] as List;
+
+  bool get foundUsers => _usersFrom(_json).isNotEmpty;
+
+  void _updateResponse(http.Response resp) {
+    _nextPage = linkToNextPage(resp.headers);
+    _json = jsonDecode(resp.body);
   }
 
   @override
   void ask() {
-    if (_callPrev) {
-      _prev.ask();
-    } else {
-      print("\nEnter the name of a user to see more information about him/her,"
-              "\\top to go back to the main menu" +
-          (_nextPage == null ? '.' : ",\n\\next to see the next users."));
-    }
+    print("\nEnter the name of a user to see more information about him/her,"
+            "\\top to go back to the main menu" +
+        (_nextPage == null ? '.' : ",\n\\next to see the next users."));
   }
 
   @override
@@ -118,15 +124,17 @@ class ShowUsers with MenuItem {
 
   @override
   FutureOr<MenuItem> call(String answer) async {
-    if (_callPrev) return _prev(answer);
-
     if (answer == '\\next') {
       if (_nextPage == null) {
         warn("There is no next page to go to.");
-        return this;
       } else {
-        _response = await get(_nextPage, verbose: verbose);
-        _nextPage = linkToNextPage(_response.headers);
+        final resp = await get(_nextPage, verbose: verbose);
+        if (resp.statusCode == 200) {
+          _updateResponse(resp);
+          showUsers();
+        } else {
+          errorResponse(resp);
+        }
       }
     } else {
       await LookupUsername(verbose, null)(answer);
@@ -134,18 +142,18 @@ class ShowUsers with MenuItem {
     return this;
   }
 
-  /// show users and return true if users were found.
-  bool _show() {
-    final json = jsonDecode(_response.body);
-    final users = json['items'] as List;
+  void reportUserCount() {
+    print("Found ${_json['total_count'] ?? '?'} users.");
+  }
+
+  void showUsers() {
+    final users = _usersFrom(_json);
     if (users.isEmpty) {
       print("No users have been found.\n"
           "Try searching again.");
-      return false;
+    } else {
+      final names = users.map((u) => u['login'] ?? '?').join(', ');
+      print(names);
     }
-    print("Found ${json['total_count'] ?? '?'} users:");
-    final names = users.map((u) => u['login'] ?? '?').join(', ');
-    print(names);
-    return true;
   }
 }
