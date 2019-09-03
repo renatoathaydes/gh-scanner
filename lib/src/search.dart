@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:github_scanner/github_scanner.dart';
 import 'package:github_scanner/src/_http.dart';
+import 'package:github_scanner/src/repos.dart';
 import 'package:github_scanner/src/users.dart';
 
 const _accept = true;
@@ -10,6 +11,7 @@ const _reject = false;
 class UserSearch with MenuItem {
   String location;
   String language;
+  String topic;
   int numberOfRepos;
   final bool verbose;
   final MenuItem _prev;
@@ -17,12 +19,15 @@ class UserSearch with MenuItem {
   MenuItem _locationSetter;
   MenuItem _languageSetter;
   MenuItem _numOfReposSetter;
+  MenuItem _topicSetter;
 
   UserSearch(this.verbose, this._prev) {
     _locationSetter =
         _SetParameter("Enter a location (e.g. Stockholm).", _setLocation, this);
     _languageSetter = _SetParameter(
         "Enter a Programming Language name (e.g. Java).", _setLanguage, this);
+    _topicSetter = _SetParameter(
+        "Enter a topic of interest (e.g. security).", _setTopic, this);
     _numOfReposSetter = _SetParameter(
         "Enter the minimum number of repositories (e.g. 4).",
         _setNumRepos,
@@ -34,8 +39,12 @@ class UserSearch with MenuItem {
     print("Enter a parameter to include in the search:\n"
         "  1 - Location${location == null ? '' : ' ($location)'}\n"
         "  2 - Programming Language${language == null ? '' : ' ($language)'}\n"
-        "  3 - Number of repositories owned${numberOfRepos == null ? '' : ' ($numberOfRepos)'}");
-    if (location != null || language != null || numberOfRepos != null) {
+        "  3 - Topic of interest${topic == null ? '' : ' ($topic)'}\n"
+        "  4 - Number of repositories owned${numberOfRepos == null ? '' : ' ($numberOfRepos)'}");
+    if (location != null ||
+        language != null ||
+        numberOfRepos != null ||
+        topic != null) {
       print("Type \\s to start a search.");
     }
   }
@@ -51,6 +60,8 @@ class UserSearch with MenuItem {
       case '2':
         return _languageSetter;
       case '3':
+        return _topicSetter;
+      case '4':
         return _numOfReposSetter;
       case '\\s':
         return _go();
@@ -69,6 +80,11 @@ class UserSearch with MenuItem {
     return _accept;
   }
 
+  bool _setTopic(String top) {
+    topic = top;
+    return _accept;
+  }
+
   bool _setNumRepos(String answer) {
     numberOfRepos = int.tryParse(answer);
     if (numberOfRepos == null || numberOfRepos < 0) {
@@ -80,6 +96,16 @@ class UserSearch with MenuItem {
 
   Future<MenuItem> _go() async {
     if (location != null || language != null || numberOfRepos != null) {
+      if (topic != null) {
+        // TODO advanced search including topic
+        warn("Sorry, but for now, searches by topic must be by topic-only!\n"
+            "I am still working on more advanced searches.\n"
+            "Clearing your other criteria so you can search by typing \\s.");
+        location = null;
+        language = null;
+        numberOfRepos = null;
+        return this;
+      }
       final resp = await findUsers(
           location: location,
           language: language,
@@ -97,6 +123,28 @@ class UserSearch with MenuItem {
         errorResponse(resp);
         return _prev;
       }
+    } else if (topic != null) {
+      print("Running topic-only search");
+      // TODO topic-only search
+      final resp = RepoResponse(await findRepoByTopic(topic, verbose: verbose));
+      print("Will check links: ${resp.linksToSubscribers}");
+      final futureResponses = resp.linksToSubscribers
+          .map((link) => get(link, verbose: verbose))
+          .toList();
+
+      // TODO handle errors
+      await for (final usersResp in Stream.fromFutures(futureResponses)) {
+        if (usersResp.statusCode == 200) {
+          final names = ShowUsers(verbose, null, usersResp).usernames;
+          if (names.isNotEmpty) {
+            print(names.join(', '));
+          }
+        } else {
+          errorResponse(usersResp);
+          break;
+        }
+      }
+      return this;
     } else {
       warn("No query parameters have been entered. Please try again.");
       return this;

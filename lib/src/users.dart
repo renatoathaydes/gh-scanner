@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:convert';
+import 'dart:convert' hide json;
 
 import 'package:github_scanner/github_scanner.dart';
 import 'package:github_scanner/src/_http.dart';
@@ -103,13 +103,21 @@ class ShowUsers with MenuItem {
     _updateResponse(response);
   }
 
-  static List _usersFrom(json) => json['items'] as List;
+  static List _usersFrom(json) =>
+      (json is List) ? json : (json['items'] as List);
 
   bool get foundUsers => _usersFrom(_json).isNotEmpty;
 
   void _updateResponse(http.Response resp) {
     _nextPage = linkToNextPage(resp.headers);
     _json = jsonDecode(resp.body);
+  }
+
+  List<String> get usernames {
+    return _usersFrom(_json)
+        .map((u) => u['login']?.toString())
+        .where((n) => n != null)
+        .toList();
   }
 
   @override
@@ -147,13 +155,12 @@ class ShowUsers with MenuItem {
   }
 
   void showUsers() {
-    final users = _usersFrom(_json);
+    final users = usernames;
     if (users.isEmpty) {
       print("No users have been found.\n"
           "Try searching again.");
     } else {
-      final names = users.map((u) => u['login'] ?? '?').join(', ');
-      print(names);
+      print(users.join(', '));
     }
   }
 }
