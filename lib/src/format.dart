@@ -1,15 +1,13 @@
 import 'dart:io' show stdout;
 import 'dart:math';
 
-import 'package:meta/meta.dart';
-
 class TabularDataPrinter {
   final int columns;
   final int colMinWidth;
   final Set<String> _allItems = {};
   final List<String> _waitingToFlush = [];
 
-  TabularDataPrinter({@required this.columns, this.colMinWidth = 16}) {
+  TabularDataPrinter({this.columns = 4, this.colMinWidth = 16}) {
     if (columns <= 0) {
       throw ArgumentError.value(columns, "columns", "must be greater than 0");
     }
@@ -23,7 +21,7 @@ class TabularDataPrinter {
     }
   }
 
-  void addAll(List<String> items) => items.forEach(add);
+  void addAll(Iterable<String> items) => items.forEach(add);
 
   void _maybeFlush() {
     if (_waitingToFlush.length == columns) {

@@ -37,8 +37,8 @@ String linkToNextPage(Map<String, String> headers) {
 FutureOr<T> handleError<T>(FutureOr<T> Function() run) async {
   try {
     return await run();
-  } catch (e) {
-    error("ERROR: $e");
+  } catch (e, s) {
+    error("ERROR: $e\n$s");
     return null;
   }
 }

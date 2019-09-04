@@ -3,6 +3,7 @@ import 'dart:convert' hide json;
 
 import 'package:github_scanner/github_scanner.dart';
 import 'package:github_scanner/src/_http.dart';
+import 'package:github_scanner/src/format.dart';
 import 'package:github_scanner/src/repos.dart';
 import 'package:http/http.dart' as http;
 
@@ -22,8 +23,19 @@ const _userSummary = {
 
 class UsersResponse with ItemsResponse {
   final http.Response resp;
+  List<String> _usernames;
 
   UsersResponse(this.resp);
+
+  List<String> get usernames {
+    if (_usernames == null) {
+      _usernames = items
+          .map((u) => u['login']?.toString())
+          .where((n) => n != null)
+          .toList();
+    }
+    return _usernames;
+  }
 }
 
 class LookupUsername with MenuItem {
@@ -110,16 +122,13 @@ class ShowUsers with MenuItem {
 
   bool get foundUsers => _resp.isNotEmpty;
 
+  int get totalCount => _resp.totalCount;
+
   void _updateResponse(http.Response resp) {
     _resp = UsersResponse(resp);
   }
 
-  List<String> get usernames {
-    return _resp.items
-        .map((u) => u['login']?.toString())
-        .where((n) => n != null)
-        .toList();
-  }
+  List<String> get usernames => _resp.usernames;
 
   @override
   void ask() {
@@ -161,7 +170,9 @@ class ShowUsers with MenuItem {
       print("No users have been found.\n"
           "Try searching again.");
     } else {
-      print(users.join(', '));
+      final printer = TabularDataPrinter();
+      printer.addAll(users);
+      printer.flush();
     }
   }
 }

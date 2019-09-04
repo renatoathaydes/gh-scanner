@@ -27,9 +27,18 @@ void useAccessToken(String token) {
   }
 }
 
-Future<http.Response> findRepoByTopic(String topic, {@required bool verbose}) =>
-    get('${githubUrl}/search/repositories?q=topic:$topic',
-        headers: const {'Accept': githubJsonMercyPreview}, verbose: verbose);
+Future<http.Response> findRepoByTopic(
+  String topic, {
+  @required bool verbose,
+  int perPage,
+  http.Client client,
+}) =>
+    get(
+        '${githubUrl}/search/repositories'
+        '?q=topic:$topic${_pageParam(perPage)}',
+        headers: const {'Accept': githubJsonMercyPreview},
+        verbose: verbose,
+        client: client);
 
 Future<http.Response> findUser(String user, {@required bool verbose}) =>
     get('${githubUrl}/users/$user', verbose: verbose);
@@ -39,14 +48,21 @@ Future<http.Response> findUsers({
   String language,
   int numberOfRepos,
   @required bool verbose,
+  int perPage,
+  http.Client client,
 }) {
   List<String> queryParts = ['type:user'];
   if (location != null) queryParts.add("location:$location");
   if (language != null) queryParts.add("language:$language");
   if (numberOfRepos != null) queryParts.add("repos:>=$numberOfRepos");
-  return get('${githubUrl}/search/users?q=${queryParts.join(' ')}',
-      verbose: verbose);
+  return get(
+      '${githubUrl}/search/users'
+      '?q=${queryParts.join(' ')}${_pageParam(perPage)}',
+      verbose: verbose,
+      client: client);
 }
+
+String _pageParam(int perPage) => perPage == null ? '' : '&per_page=$perPage';
 
 Map<String, String> _withAuth(Map<String, String> headers) {
   if (_accessToken != null) {
@@ -61,11 +77,14 @@ Future<http.Response> get(
   dynamic url, {
   Map<String, String> headers = const {'Accept': githubJsonV3},
   @required bool verbose,
+  http.Client client,
 }) async {
   http.Response resp;
 
   try {
-    resp = await http.get(url, headers: _withAuth(headers));
+    resp = client == null
+        ? (await http.get(url, headers: _withAuth(headers)))
+        : (await client.get(url, headers: _withAuth(headers)));
     return resp;
   } finally {
     if (verbose) {

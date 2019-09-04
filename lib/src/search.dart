@@ -5,6 +5,7 @@ import 'package:github_scanner/src/_http.dart';
 import 'package:github_scanner/src/format.dart';
 import 'package:github_scanner/src/repos.dart';
 import 'package:github_scanner/src/users.dart';
+import 'package:http/http.dart' as http;
 
 const _accept = true;
 const _reject = false;
@@ -102,42 +103,38 @@ class UserSearch with MenuItem {
   Future<MenuItem> _go() async {
     if (location != null || language != null || numberOfRepos != null) {
       if (topic != null) {
-        // TODO advanced search including topic
-        warn("Sorry, but for now, searches by topic must be by topic-only!\n"
-            "I am still working on more advanced searches.\n"
-            "Clearing your other criteria so you can search by typing \\s.");
-        location = null;
-        language = null;
-        numberOfRepos = null;
-        return this;
-      }
-      final resp = await findUsers(
-          location: location,
-          language: language,
-          numberOfRepos: numberOfRepos,
-          verbose: verbose);
-      if (resp.statusCode == 200) {
-        final showUsers = ShowUsers(verbose, this, resp);
-        showUsers.reportUserCount();
-        if (showUsers.foundUsers) {
-          showUsers.showUsers();
-          return showUsers;
-        }
-        return this;
+        return await _searchUsingTopicAndOthers();
       } else {
-        errorResponse(resp);
-        return _prev;
+        return await _searchWithoutTopic();
       }
     } else if (topic != null) {
-      await _searchByTopic();
-      return this;
+      return await _searchByTopic();
     } else {
       warn("No query parameters have been entered. Please try again.");
       return this;
     }
   }
 
-  Future<void> _searchByTopic() async {
+  Future<MenuItem> _searchWithoutTopic() async {
+    final resp = await findUsers(
+        location: location,
+        language: language,
+        numberOfRepos: numberOfRepos,
+        verbose: verbose);
+    if (resp.statusCode == 200) {
+      final showUsers = ShowUsers(verbose, this, resp);
+      showUsers.reportUserCount();
+      if (showUsers.foundUsers) {
+        showUsers.showUsers();
+        return showUsers;
+      }
+    } else {
+      errorResponse(resp);
+    }
+    return this;
+  }
+
+  Future<MenuItem> _searchByTopic() async {
     final resp = RepoResponse(await findRepoByTopic(topic, verbose: verbose));
     if (verbose) {
       info("Will check repositories: ${resp.linksToSubscribers.join(', ')}");
@@ -145,7 +142,7 @@ class UserSearch with MenuItem {
     final futureResponses = resp.linksToSubscribers
         .map((link) => get(link, verbose: verbose))
         .toList();
-    final printer = TabularDataPrinter(columns: 4);
+    final printer = TabularDataPrinter();
     await for (final usersResp in Stream.fromFutures(futureResponses)) {
       if (usersResp.statusCode == 200) {
         final names = ShowUsers(verbose, null, usersResp).usernames;
@@ -156,6 +153,92 @@ class UserSearch with MenuItem {
       }
     }
     printer.flush();
+    return this;
+  }
+
+  Future<MenuItem> _searchUsingTopicAndOthers() async {
+    final client = http.Client();
+    try {
+      var resp = await findUsers(
+        location: location,
+        language: language,
+        numberOfRepos: numberOfRepos,
+        verbose: verbose,
+        perPage: 100,
+        client: client,
+      );
+      if (resp.statusCode != 200) {
+        errorResponse(resp);
+        return this;
+      }
+
+      // accumulate users from as many pages as necessary to find a good number
+      final users = <String>{};
+      while (users.length < 1000) {
+        final usersResp = UsersResponse(resp);
+        users.addAll(usersResp.usernames);
+        print(
+            "Searching next page: ${usersResp.nextPage}, total users so far: ${users.length}");
+        if (usersResp.nextPage == null) break;
+        resp = await get(usersResp.nextPage, verbose: verbose, client: client);
+        if (resp.statusCode != 200) break;
+      }
+
+      final showUsers = ShowUsers(verbose, this, resp);
+      if (users.isEmpty) {
+        print("No users have been found.\n"
+            "Try searching again.");
+        return this;
+      }
+      // found some users, try to find the same users by topic search now
+      final repoResp = RepoResponse(await findRepoByTopic(topic,
+          verbose: verbose, perPage: 100, client: client));
+      if (repoResp.isEmpty) {
+        print("Found ${showUsers.totalCount} users,"
+            " but none of them seems to be interested in the topic.\n"
+            "Maybe try removing the topic from the search.");
+        return this;
+      }
+      if (verbose) {
+        info(
+            "Will check repositories: ${repoResp.linksToSubscribers.join(', ')}");
+      }
+      final futureResponses = repoResp.linksToSubscribers
+          .map((link) => get(link, verbose: verbose, client: client))
+          .toList();
+
+      final usersOnTopic = <String>{};
+      await for (final usersResp in Stream.fromFutures(futureResponses)) {
+        if (usersResp.statusCode == 200) {
+          final names = UsersResponse(usersResp).usernames;
+          usersOnTopic.addAll(names);
+        } else {
+          errorResponse(usersResp);
+          break;
+        }
+      }
+
+      final allUsers = users.intersection(usersOnTopic);
+      print("Matching users: ${users.length}, "
+          "on topic: ${usersOnTopic.length}, "
+          "both: ${allUsers.length}");
+
+      if (allUsers.isEmpty) {
+        print("Found ${showUsers.totalCount} users,"
+            " but none of them seems to be interested in the topic.\n"
+            "Maybe try removing the topic from the search.");
+        return this;
+      } else {
+        print("Found ${showUsers.totalCount} users, ${allUsers.length} of which"
+            " matching the topic selected:");
+        final printer = TabularDataPrinter();
+        printer.addAll(allUsers);
+        printer.flush();
+        return showUsers;
+      }
+    } finally {
+      client.close();
+    }
   }
 }
 
