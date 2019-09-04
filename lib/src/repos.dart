@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:github_scanner/src/_http.dart';
 import 'package:http/http.dart' as http;
@@ -18,64 +17,18 @@ const _repositorySummary = {
   'URL': 'html_url',
 };
 
-class RepoResponse {
+class RepoResponse with ItemsResponse {
   final http.Response resp;
-  List _repos;
-  int _totalCount;
 
   RepoResponse(this.resp);
 
-  void _readBodyIfNeeded() {
-    if (_repos != null) return;
-    if (isError) {
-      _repos = const [];
-      _totalCount = 0;
-    } else {
-      final json = jsonDecode(resp.body);
-      _repos = _reposFrom(json);
-      _totalCount = _totalCountFrom(json);
-    }
-  }
-
-  bool get isError => resp.statusCode != 200;
-
-  bool get isNotError => !isError;
-
-  List get repos {
-    _readBodyIfNeeded();
-    return _repos;
-  }
-
-  String get nextPage => linkToNextPage(resp.headers);
-
-  int get totalCount {
-    _readBodyIfNeeded();
-    return _totalCount;
-  }
+  List get repos => items;
 
   List<String> get linksToSubscribers {
     return repos
         .map((r) => r["subscribers_url"]?.toString())
         .where((s) => s != null)
         .toList();
-  }
-
-  bool get isEmpty => totalCount == 0;
-
-  static List _reposFrom(json) {
-    if (json is List) {
-      return json;
-    } else {
-      return json["items"] as List;
-    }
-  }
-
-  static int _totalCountFrom(json) {
-    if (json is List) {
-      return json.length;
-    } else {
-      return int.tryParse(json["total_count"]?.toString());
-    }
   }
 }
 
