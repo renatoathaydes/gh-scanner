@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:github_scanner/github_scanner.dart' show warn;
+import 'package:github_scanner/github_scanner.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 
@@ -10,6 +13,9 @@ const githubJsonMercyPreview = 'application/vnd.github.mercy-preview+json';
 
 String _accessToken;
 
+/// Make all HTTP requests against GitHub using the given access token.
+///
+/// If null, do not send any token.
 void useAccessToken(String token) {
   _accessToken = token;
   if (token == null) {
@@ -74,6 +80,63 @@ Future<http.Response> get(
             "${resp.body}\n"
             "------- END BODY -------");
       }
+    }
+  }
+}
+
+/// A common basic structure for GitHub API responses that return multiple
+/// items, such as users or repositories.
+mixin ItemsResponse {
+  http.Response get resp;
+
+  List _items;
+  int _totalCount;
+
+  void _readBodyIfNeeded() {
+    if (_items != null) return;
+    if (isError) {
+      _items = const [];
+      _totalCount = 0;
+    } else {
+      final json = jsonDecode(resp.body);
+      _items = _itemsFrom(json);
+      _totalCount = _totalCountFrom(json);
+    }
+  }
+
+  bool get isError => resp.statusCode != 200;
+
+  bool get isNotError => !isError;
+
+  List get items {
+    _readBodyIfNeeded();
+    return _items;
+  }
+
+  String get nextPage => linkToNextPage(resp.headers);
+
+  int get totalCount {
+    _readBodyIfNeeded();
+    return _totalCount;
+  }
+
+  bool get isEmpty => totalCount == 0;
+
+  bool get isNotEmpty => !isEmpty;
+
+  static List _itemsFrom(json) {
+    if (json is List) {
+      return json;
+    } else {
+      return json["items"] as List;
+    }
+  }
+
+  static int _totalCountFrom(json) {
+    if (json is List) {
+      return json.length;
+    } else {
+      return int.tryParse(json["total_count"]?.toString());
     }
   }
 }

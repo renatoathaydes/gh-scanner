@@ -20,6 +20,12 @@ const _userSummary = {
   'Hireable': 'hireable'
 };
 
+class UsersResponse with ItemsResponse {
+  final http.Response resp;
+
+  UsersResponse(this.resp);
+}
+
 class LookupUsername with MenuItem {
   bool verbose;
   MenuItem _prev;
@@ -96,25 +102,20 @@ class UserSubMenu with MenuItem {
 class ShowUsers with MenuItem {
   final bool verbose;
   final MenuItem _prev;
-  String _nextPage;
-  dynamic _json;
+  UsersResponse _resp;
 
   ShowUsers(this.verbose, this._prev, http.Response response) {
     _updateResponse(response);
   }
 
-  static List _usersFrom(json) =>
-      (json is List) ? json : (json['items'] as List);
-
-  bool get foundUsers => _usersFrom(_json).isNotEmpty;
+  bool get foundUsers => _resp.isNotEmpty;
 
   void _updateResponse(http.Response resp) {
-    _nextPage = linkToNextPage(resp.headers);
-    _json = jsonDecode(resp.body);
+    _resp = UsersResponse(resp);
   }
 
   List<String> get usernames {
-    return _usersFrom(_json)
+    return _resp.items
         .map((u) => u['login']?.toString())
         .where((n) => n != null)
         .toList();
@@ -124,7 +125,7 @@ class ShowUsers with MenuItem {
   void ask() {
     print("\nEnter the name of a user to see more information about him/her,"
             "\\top to go back to the main menu" +
-        (_nextPage == null ? '.' : ",\n\\next to see the next users."));
+        (_resp.nextPage == null ? '.' : ",\n\\next to see the next users."));
   }
 
   @override
@@ -133,10 +134,10 @@ class ShowUsers with MenuItem {
   @override
   FutureOr<MenuItem> call(String answer) async {
     if (answer == '\\next') {
-      if (_nextPage == null) {
+      if (_resp.nextPage == null) {
         warn("There is no next page to go to.");
       } else {
-        final resp = await get(_nextPage, verbose: verbose);
+        final resp = await get(_resp.nextPage, verbose: verbose);
         if (resp.statusCode == 200) {
           _updateResponse(resp);
           showUsers();
@@ -151,7 +152,7 @@ class ShowUsers with MenuItem {
   }
 
   void reportUserCount() {
-    print("Found ${_json['total_count'] ?? '?'} users.");
+    print("Found ${_resp.totalCount ?? '?'} users.");
   }
 
   void showUsers() {
