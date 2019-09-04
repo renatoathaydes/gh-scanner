@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:github_scanner/github_scanner.dart';
 import 'package:github_scanner/src/_http.dart';
+import 'package:github_scanner/src/format.dart';
 import 'package:github_scanner/src/repos.dart';
 import 'package:github_scanner/src/users.dart';
 
@@ -124,31 +125,33 @@ class UserSearch with MenuItem {
         return _prev;
       }
     } else if (topic != null) {
-      print("Running topic-only search");
-      // TODO topic-only search
-      final resp = RepoResponse(await findRepoByTopic(topic, verbose: verbose));
-      print("Will check links: ${resp.linksToSubscribers}");
-      final futureResponses = resp.linksToSubscribers
-          .map((link) => get(link, verbose: verbose))
-          .toList();
-
-      // TODO handle errors
-      await for (final usersResp in Stream.fromFutures(futureResponses)) {
-        if (usersResp.statusCode == 200) {
-          final names = ShowUsers(verbose, null, usersResp).usernames;
-          if (names.isNotEmpty) {
-            print(names.join(', '));
-          }
-        } else {
-          errorResponse(usersResp);
-          break;
-        }
-      }
+      await _searchByTopic();
       return this;
     } else {
       warn("No query parameters have been entered. Please try again.");
       return this;
     }
+  }
+
+  Future<void> _searchByTopic() async {
+    final resp = RepoResponse(await findRepoByTopic(topic, verbose: verbose));
+    if (verbose) {
+      info("Will check repositories: ${resp.linksToSubscribers.join(', ')}");
+    }
+    final futureResponses = resp.linksToSubscribers
+        .map((link) => get(link, verbose: verbose))
+        .toList();
+    final printer = TabularDataPrinter(columns: 4);
+    await for (final usersResp in Stream.fromFutures(futureResponses)) {
+      if (usersResp.statusCode == 200) {
+        final names = ShowUsers(verbose, null, usersResp).usernames;
+        printer.addAll(names);
+      } else {
+        errorResponse(usersResp);
+        break;
+      }
+    }
+    printer.flush();
   }
 }
 
