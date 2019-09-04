@@ -72,22 +72,26 @@ class UserSearch with MenuItem {
   }
 
   bool _setLocation(String loc) {
-    location = loc;
+    location = loc.isEmpty ? null : loc;
     return _accept;
   }
 
   bool _setLanguage(String lang) {
-    language = lang;
+    language = lang.isEmpty ? null : lang;
     return _accept;
   }
 
   bool _setTopic(String top) {
-    topic = top;
+    topic = top.isEmpty ? null : top;
     return _accept;
   }
 
-  bool _setNumRepos(String answer) {
-    numberOfRepos = int.tryParse(answer);
+  bool _setNumRepos(String num) {
+    if (num.isEmpty) {
+      numberOfRepos = null;
+      return true;
+    }
+    numberOfRepos = int.tryParse(num);
     if (numberOfRepos == null || numberOfRepos < 0) {
       warn("You must enter a positive number, please try again.");
       return _reject;
