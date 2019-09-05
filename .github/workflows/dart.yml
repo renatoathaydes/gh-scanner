@@ -13,6 +13,6 @@ jobs:
       with:
         architecture: ia32
     - name: Install dependencies
-      run: pub.bat get
+      run: cmd.exe /c pub.bat get
     - name: Run tests
-      run: pub.bat run test
+      run: cmd.exe /c pub.bat run test
