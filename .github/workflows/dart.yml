@@ -9,7 +9,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - uses: renatoathaydes/setup-dart@releases/v0.1
+    - uses: renatoathaydes/setup-dart@releases/v0
     - name: Install dependencies
       run: pub get
     - name: Run tests
