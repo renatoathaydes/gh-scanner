@@ -5,13 +5,12 @@ on: [push]
 jobs:
   build:
 
-    runs-on: ubuntu-latest
-    
-    container:
-      image:  google/dart:latest
-    
+    runs-on: windows-latest
+
     steps:
     - uses: actions/checkout@v1
+    - name: Install Dart
+      run: choco install dart-sdk
     - name: Install dependencies
       run: pub get
     - name: Run tests
