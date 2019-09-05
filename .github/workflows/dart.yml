@@ -9,10 +9,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: Install Dart
-      run: choco install dart-sdk
-    - name: Update environment
-      run: refreshenv
+    - uses: renatoathaydes/setup-dart@v0.1
     - name: Install dependencies
       run: pub get
     - name: Run tests
