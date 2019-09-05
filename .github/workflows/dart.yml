@@ -9,7 +9,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - uses: DanTup/setup-dart@v0.0.7
+    - uses: DanTup/gh-actions/setup-dart@v0.0.7
       with:
         architecture: ia32
     - name: Install dependencies
