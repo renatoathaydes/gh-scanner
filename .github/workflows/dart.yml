@@ -10,8 +10,6 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - uses: DanTup/gh-actions/setup-dart@v0.0.7
-      with:
-        architecture: ia32
     - name: Install dependencies
       run: pub get
     - name: Run tests
