@@ -9,7 +9,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - uses: renatoathaydes/setup-dart@0.1.1
+    - uses: renatoathaydes/setup-dart@releases/v0
       with:
         architecture: ia32
     - name: Install dependencies
