@@ -84,7 +84,7 @@ packages:
       name: dartle
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.0.0"
+    version: "0.1.0"
   front_end:
     dependency: transitive
     description:
@@ -148,6 +148,13 @@ packages:
       url: "https://pub.dartlang.org"
     source: hosted
     version: "0.3.23"
+  logging:
+    dependency: transitive
+    description:
+      name: logging
+      url: "https://pub.dartlang.org"
+    source: hosted
+    version: "0.11.3+2"
   matcher:
     dependency: transitive
     description:
