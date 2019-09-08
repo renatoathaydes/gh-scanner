@@ -13,4 +13,5 @@ doc/api/
 .idea/
 *.iml
 
+.dartle_tool/
 /gh-scanner.snapshot
