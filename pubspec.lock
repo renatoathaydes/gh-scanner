@@ -7,7 +7,7 @@ packages:
       name: analyzer
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.38.1"
+    version: "0.38.2"
   ansicolor:
     dependency: "direct main"
     description:
@@ -84,14 +84,14 @@ packages:
       name: dartle
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.1.0"
+    version: "0.2.0"
   front_end:
     dependency: transitive
     description:
       name: front_end
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.1.23"
+    version: "0.1.24"
   glob:
     dependency: transitive
     description:
@@ -147,7 +147,7 @@ packages:
       name: kernel
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "0.3.23"
+    version: "0.3.24"
   logging:
     dependency: transitive
     description:
@@ -189,7 +189,7 @@ packages:
       name: node_preamble
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.4.6"
+    version: "1.4.7"
   open_url:
     dependency: "direct main"
     description:
@@ -322,7 +322,7 @@ packages:
       name: test
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.6.8"
+    version: "1.6.9"
   test_api:
     dependency: transitive
     description:
@@ -350,7 +350,7 @@ packages:
       name: vm_service
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "1.1.1"
+    version: "1.2.0"
   watcher:
     dependency: transitive
     description:
